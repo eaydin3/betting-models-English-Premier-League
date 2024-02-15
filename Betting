@@ -1,0 +1,712 @@
+IE 582 Project
+7 January 2019
+TABLE OF CONTENTS
+
+Introduction
+1.1. Odds and Probabilities
+
+1.2. Data
+
+Literature Review
+
+Approach
+
+3.1. Multinomial Logistic Regression
+
+3.2.Poisson Model
+
+3.3. Random Forest
+
+3.4 Scores of the Teams from Their Last 5 Matches
+
+Results
+
+Conclusions and Future Work
+
+R Codes
+
+References
+
+1. INTRODUCTION
+
+The project aims to forecast the probabilities of 1x2 bets, namely home, tie and way, better than bookmakers in the English Premier League. For this purpose, some models based on the data mining methods are built to determine predicted probabilities for the results of the upcoming matches. Models are set using historical football matches data and odds data provided by bookmakers. After that, a feature related performance of the teams for the last 5 games is added.
+
+Three different models are implemented which are multinomial logistic regression, Poisson distribution and random forest considering that the problem is multi-class classification problem. Then, the outcomes of the models are calculated based on ranked probability score (RPS). RPS is a measure of how good forecasts, expressed as probability distributions, conform with outcomes. Based on the scores, random forest model is selected. Results and discussions are provided in the upcoming sections.
+
+1.1. Odds and Probabilities
+
+The odds are evaluated in a format called as European style. For a fair bet, the odds are calculated as 1 divided by probability of winning the match. It is not possible to exactly know how the bookmakers set the odds, but it is for sure that odds are not setting at the best possible prediction of the match results. Preferably, bookmakers tend to weight their predictions to increase their margin. Therefore, we can accept the reality and presume that the odds are given by a naÃ¯ve bookmaker and set the odds as the reciprocal of the probability and scaled them. Then the implied probabilities become:
+
+
+
+1.2. Data
+
+There are two data files which consists information about matches and odds.
+
+Match Information
+
+The data includes the information about the games played in English Premier League from August 2010 until today. A representation of the data is given below:
+
+matchId	home	away	type	Match_DateTime	HomeGoals	AwayGoals
+ILVbJgQm	aston villa	west ham	soccer	2010-08-14 15:00:00	3	0
+SGIEDVvJ	wolves	stoke city	soccer	2010-08-14 15:00:00	2	1
+YwL5xFHJ	bolton	fulham	soccer	2010-08-14 15:00:00	0	0
+lQJAEBPC	wigan	blackpool	soccer	2010-08-14 15:00:00	0	4
+byRcHDuf	sunderland	birmingham	soccer	2010-08-14 15:00:00	2	2
+t0G2GXf0	blackburn	everton	soccer	2010-08-14 15:00:00	1	0
+As can be seen, each game has a unique match id and corresponding home and away teams. If a match has not played yet, then the score is given as NA, otherwise, score is provided. Date of the match is written in âUnix Epoch Timeâ but it has changed with âanytimeâ package to become readable.
+
+Odd Information
+
+This data includes the information about the odds given by multiple bookmakers. Bookmakers provide different bet types such as â1x2â, âahâ, âbtsâ, âdcâ, âhaâ, and âouâ. Each bet type has odd type. For example, bet type of â1x2â has odd types which are âodd1â, âodd2â and âoddXâ. For over/under bet types, there is additional column known as total handicap which keeps the information of the number of goals. Also, Asian handicap type of bets have this parameter. Additionally, odd information shared by different bookmakers is changing over time. A representation of the data is given below:
+
+matchId	Match_DateTime	betType	oddtype	bookmaker	odd	totalhandicap
+004f4ING	2015-01-11 10:15:00	1x2	odd1	10Bet	1.67	NA
+004f4ING	2015-02-01 15:56:00	1x2	odd1	10Bet	1.65	NA
+004f4ING	2015-01-12 01:24:00	1x2	odd1	12BET	1.67	NA
+004f4ING	2015-02-01 15:48:00	1x2	odd1	12BET	1.65	NA
+004f4ING	2015-01-12 04:23:00	1x2	odd1	188BET	1.70	NA
+004f4ING	2015-02-01 15:53:00	1x2	odd1	188BET	1.67	NA
+2. LITERATURE REVIEW
+
+Multinomial logistic regression model was used to determine the market efficiency for horse racing in betting literature (Figlewski, 1979) and also to predict match outcomes of cricket (Akhtar and Scarf, 2012). Vlastakis et al. (2009) is a former study which performed by multinomial logistic regression model which relates soccer games with betting markets. In this study, however, the aim was not to test the market efficiency directly. Alternatively, Vlastakis generated a goal-based statistical models using multinomial logit regression (see, e.g., Dixon and Coles, 1997; Rue and Salvesen, 2000; Crowder et al., 2002; Dixon and Pope, 2004; Skinner and Freeman, 2009; Bastos and da Rosa, 2013; Koopman and Lit, 2014) to forecast match results using the implicit probabilities.
+
+There are some studies about Poisson distribution in the literature. Probability distribution of goals scored should be discussed in order to find a model and Poisson distribution is one way to model. In order to represent the distribution of goals scored in sports with competing teams, Poisson distribution approach is generally approved. [1]. M.J. Maher used univariate and bivariate Poisson distributions to predict final result of a match by using attacking and defensive scores [2]. Also, according to Lee,Karlis and Ntzoufras, there is a low correlation between number of goals by two opponents. The independent model has been widened to embody a dependence in most of the cases. This revision makes sense as in football matches because when one team sÂ¬cores more, the remaining teams may do the same. This higher speed in game play may cause more of these opportunities. For example, basketball is a common example of this interaction, âthe correlations for the National Basketball Association and Euroleague scores for the 2000-2001 season are .41 and .32 respectivelyâ [1]. Apart from that, an alternative bivariate model can be set if both outcome variables follow a bivariate Poisson distribution. However, this model should be sparely conducted due to its amount of computation required. [1]. This bivariate Poisson distribution has some features for soccer modeling. One of them is that the capacity to improve the model fitting and advancing the number of ties [1].
+
+Literature about support vector machines and random forest to forecast probabilities of match outcomes are scanned. According to Fernandez and Ulmer, the most successful model was an SVM so that they implemented a model with RBF known as gaussian kernel. After optimizing SVM, they evaluated training error as 0.21 and test error as 0.50. Furthermore, they added additional features such as goal differential and weights of each of the last seven games etc. but they realized that this caused overfitting issue. After that, they tried random forest model as an ensemble method. In this time, random forest achieved a test error rate that changed between 0.49 and 0.51 and a range between 0.04 and 0.05 for training error which was very small compared to SVM. In order to compare these two methods, they implemented a ROC curve which fits 3-class classification problem. As a result, SVM with an RBF kernel performed better than random forest model in terms of predicting draws. However, random forest model outperforms the SVM in terms of predicting wins and loss [3].
+
+3.APPROACH
+
+The aim of the project is to build a model predicting the probabilities of home, tie and away for the upcoming matches. The problem can be put into multinomial logistic regression or classification problem. Although this problem can be seen as a classification problem, the aim is not only predicting classes but also the probabilities of those classes. The matches and odds data were preprocessed in order to be usable in the models firstly. Odds of 1x2 bets should be used as predictors whereas match result should be the class to predict basically. Odds of two bookmakers who are âBetfairExchangeâand âPaddyPowerâregarded as bad bookmakers were removed. The matches since 2012 were taken as train data and the ones just played as test data after some trials.
+
+As the performance measure for the forecasts, RPS (Ranked Probability Score) is used to compare different models. In RPS, both the location and spread of the forecast distribution are taken into account when judging how close the distribution is to the observed value.
+
+
+
+where r is the number of outcomes, pj is the forecasted probability of outcome j and ej is the actual probability of outcome j. r = 3 in the case of 1x2 bets. Note that this score is defined for each match. The primary measure to be used for evaluation is âAverage RPSâ of the predicted games of the corresponding week.
+
+We removed some of the bookmakers from the model to make it a better predictor. 15 more bookmakers known as not so successful at their bettings were removed and the next matches were predicted with this new model. However, this removal did not change the predicted probabilities considerably so, another model was tried to get a better predictor than glmnet model. In addition, narrowing the traindata range was also tried. The matches of last 2 and 3 years were taken respectively, however, this also did not improve the results. Then we started to change the model. We first tried the base model (multinomial logistic regression) and then we tried a Poisson model. After we saw that this worsened RPS, we tried decision tree and random forest. Random forest gave better results, therefore we continued with it. We did not try svm kernels, because we know from lecture notes and homework 4 that it gives poor results for multiclass problems. We also considered gradient boosting, however, we did not continue with it because it does not outweigh random forest model in terms of performance and is time consuming in large datasets.
+
+3.1. Multinomial Logistic Regression
+
+The first model we worked on is the regularized multinomial regression provided on the project description. It is penalized logistic regression done with glmnet function which finds the best parameters by inner cross validation and penalizes some variables by solving the following problem:
+
+
+
+3.2.Poisson Model
+
+Poisson distribution was considered to be used in the model, because its nature fits the model we are trying to construct. Poisson is a discrete probability distribution that describes the probability of the number of events within a specific time period with a known average rate of occurrence. In our context, we need to maket he assumption that goals donât become more or less likely by the number of goals already scored in the match. The number of goals is expressed as function of average rate of goals.
+
+avg_home_goals	avg_away_goals
+1.536036	1.175266
+By looking at the historical data, we can say that on average, the home team scores more goals than the away team. This is called âhome (field) advantageâ and isnât specific to soccer.
+
+Since we know the average home and away goals, we can treat the number of goals scored by the home and away teams as Poisson distributions.
+
+The probability of a draw is simply the sum of the events where the two teams score the same amount of goals. The difference of two Poisson distribution is called a Skellam distribution. So we can calculate the probability of a draw by inputting the mean goal values into this distribution.
+
+x
+0.2527265
+Note: Probability of Draw
+The Poisson model is summarized below.
+
+## 
+## Call:
+## glm(formula = goals ~ home + team + opponent, family = poisson(link = log), 
+##     data = .)
+## 
+## Deviance Residuals: 
+##     Min       1Q   Median       3Q      Max  
+## -2.3655  -1.2368  -0.1220   0.5582   3.6206  
+## 
+## Coefficients:
+##                            Estimate Std. Error z value Pr(>|z|)    
+## (Intercept)                0.322539   0.074502   4.329 1.50e-05 ***
+## home                       0.268414   0.024810  10.819  < 2e-16 ***
+## teamaston villa           -0.612977   0.081142  -7.554 4.21e-14 ***
+## teambirmingham            -0.722728   0.177343  -4.075 4.60e-05 ***
+## teamblackburn             -0.446983   0.115394  -3.874 0.000107 ***
+## teamblackpool             -0.335208   0.149779  -2.238 0.025220 *  
+## teambolton                -0.382003   0.112207  -3.404 0.000663 ***
+## teambournemouth           -0.318644   0.092147  -3.458 0.000544 ***
+## teambrighton              -0.637471   0.149802  -4.255 2.09e-05 ***
+## teamburnley               -0.741648   0.108289  -6.849 7.45e-12 ***
+## teamcardiff               -0.764270   0.158634  -4.818 1.45e-06 ***
+## teamchelsea               -0.032420   0.060703  -0.534 0.593287    
+## teamcrystal-palace        -0.769256   0.271862  -2.830 0.004661 ** 
+## teameverton               -0.304464   0.065505  -4.648 3.35e-06 ***
+## teamfulham                -0.514251   0.086122  -5.971 2.36e-09 ***
+## teamhuddersfield          -1.043967   0.182638  -5.716 1.09e-08 ***
+## teamhull city             -0.663050   0.111801  -5.931 3.02e-09 ***
+## teamleicester             -0.275193   0.081353  -3.383 0.000718 ***
+## teamliverpool             -0.038771   0.060975  -0.636 0.524870    
+## teammanchester-city        0.319301   0.162291   1.967 0.049131 *  
+## teammanchester-united     -0.005844   0.264407  -0.022 0.982365    
+## teammiddlesbrough         -1.057284   0.222614  -4.749 2.04e-06 ***
+## teamnewcastle             -0.674763   0.175481  -3.845 0.000120 ***
+## teamnewcastle utd         -0.438270   0.074614  -5.874 4.26e-09 ***
+## teamnorwich               -0.588484   0.093771  -6.276 3.48e-10 ***
+## teamqpr                   -0.614949   0.106266  -5.787 7.17e-09 ***
+## teamreading               -0.507709   0.164017  -3.095 0.001965 ** 
+## teamsouthampton           -0.401413   0.074401  -5.395 6.84e-08 ***
+## teamstoke                 -0.847070   0.254376  -3.330 0.000868 ***
+## teamstoke city            -0.559862   0.074139  -7.552 4.30e-14 ***
+## teamsunderland            -0.611326   0.076926  -7.947 1.91e-15 ***
+## teamswansea               -0.499619   0.074501  -6.706 2.00e-11 ***
+## teamtottenham             -0.070546   0.061297  -1.151 0.249778    
+## teamwatford               -0.477229   0.097385  -4.900 9.56e-07 ***
+## teamwest-ham              -0.271305   0.207233  -1.309 0.190473    
+## teamwest brom             -0.516989   0.071391  -7.242 4.43e-13 ***
+## teamwest ham              -0.415602   0.072497  -5.733 9.89e-09 ***
+## teamwigan                 -0.472202   0.098555  -4.791 1.66e-06 ***
+## teamwolves                -0.569950   0.111036  -5.133 2.85e-07 ***
+## opponentaston villa        0.346231   0.081289   4.259 2.05e-05 ***
+## opponentbirmingham         0.269837   0.153485   1.758 0.078735 .  
+## opponentblackburn          0.437905   0.110059   3.979 6.93e-05 ***
+## opponentblackpool          0.581870   0.135902   4.282 1.86e-05 ***
+## opponentbolton             0.424175   0.110742   3.830 0.000128 ***
+## opponentbournemouth        0.392665   0.094127   4.172 3.02e-05 ***
+## opponentbrighton           0.208056   0.136073   1.529 0.126263    
+## opponentburnley            0.208535   0.099187   2.102 0.035515 *  
+## opponentcardiff            0.505284   0.119290   4.236 2.28e-05 ***
+## opponentchelsea           -0.119162   0.084600  -1.409 0.158975    
+## opponentcrystal-palace     0.167578   0.223117   0.751 0.452607    
+## opponenteverton            0.103471   0.079564   1.300 0.193436    
+## opponentfulham             0.316952   0.088162   3.595 0.000324 ***
+## opponenthuddersfield       0.329827   0.130732   2.523 0.011638 *  
+## opponenthull city          0.342096   0.100391   3.408 0.000655 ***
+## opponentleicester          0.147213   0.093845   1.569 0.116721    
+## opponentliverpool         -0.026993   0.082626  -0.327 0.743904    
+## opponentmanchester-city   -0.302266   0.284369  -1.063 0.287811    
+## opponentmanchester-united  0.209546   0.309686   0.677 0.498635    
+## opponentmiddlesbrough      0.150069   0.165155   0.909 0.363533    
+## opponentnewcastle          0.041323   0.164617   0.251 0.801794    
+## opponentnewcastle utd      0.297440   0.081189   3.664 0.000249 ***
+## opponentnorwich            0.343006   0.090752   3.780 0.000157 ***
+## opponentqpr                0.392450   0.097523   4.024 5.72e-05 ***
+## opponentreading            0.551655   0.137221   4.020 5.82e-05 ***
+## opponentsouthampton        0.130941   0.084680   1.546 0.122031    
+## opponentstoke              0.337403   0.189356   1.782 0.074775 .  
+## opponentstoke city         0.141601   0.081374   1.740 0.081835 .  
+## opponentsunderland         0.268168   0.079884   3.357 0.000788 ***
+## opponentswansea            0.212604   0.081242   2.617 0.008873 ** 
+## opponenttottenham         -0.038606   0.082753  -0.467 0.640839    
+## opponentwatford            0.295676   0.096440   3.066 0.002170 ** 
+## opponentwest-ham           0.163363   0.228293   0.716 0.474248    
+## opponentwest brom          0.223698   0.078403   2.853 0.004329 ** 
+## opponentwest ham           0.284247   0.079931   3.556 0.000376 ***
+## opponentwigan              0.396492   0.097148   4.081 4.48e-05 ***
+## opponentwolves             0.421130   0.102125   4.124 3.73e-05 ***
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## (Dispersion parameter for poisson family taken to be 1)
+## 
+##     Null deviance: 6156.9  on 4883  degrees of freedom
+## Residual deviance: 5440.9  on 4808  degrees of freedom
+## AIC: 14211
+## 
+## Number of Fisher Scoring iterations: 5
+Manchester City has an estimate of 0.4517513 (better than average), while Sunderland has -0.584457 (worse than average). The opponent values demonstrate the defensive strength of each team. Manchester City has -1.2436159, and Sunderland has 0.2866873, which means that a team is less likely to score against Manchester City.
+
+We can simulate the matches in historical data with our Poisson model and calculate home win, away win and tie probabilities.
+matchId	Match_DateTime	home	away	HomeGoals	AwayGoals	home_win_prob	away_win_prob	tie_prob	result_guess
+ILVbJgQm	2010-08-14 15:00:00	aston villa	west ham	3	0	0.3704366	0.3649355	0.2646276	Home
+SGIEDVvJ	2010-08-14 15:00:00	wolves	stoke city	2	1	0.3548205	0.3670984	0.2780810	Away
+YwL5xFHJ	2010-08-14 15:00:00	bolton	fulham	0	0	0.4750791	0.2858938	0.2390253	Home
+lQJAEBPC	2010-08-14 15:00:00	wigan	blackpool	0	4	0.5035521	0.2809883	0.2154502	Home
+byRcHDuf	2010-08-14 15:00:00	sunderland	birmingham	2	2	0.4592055	0.2543188	0.2864756	Home
+t0G2GXf0	2010-08-14 15:00:00	blackburn	everton	1	0	0.3101297	0.4431194	0.2467499	Away
+Then we can apply our model to testdata to predict the upcoming results. After finding the probabilities, we can commpare our model results with a reputable bookmakerâs odds, such as bet365.
+
+matchId	Match_DateTime	home	away	HomeGoals	AwayGoals	home_win_prob	away_win_prob	tie_prob	result_guess	odd1	odd2	oddX	result_bookmaker
+b5LtgfAj	2019-01-02 19:45:00	chelsea	southampton	NA	NA	0.5959383	0.1443071	0.2062688	Home	0.8000000	0.0769231	0.1739130	Home
+jDNRGc2c	2019-01-02 19:45:00	huddersfield	burnley	NA	NA	0.2921369	0.3643874	0.3396825	Away	0.4545455	0.2564103	0.3225806	Home
+KEMxfzep	2019-01-02 19:45:00	bournemouth	watford	NA	NA	0.4570543	0.2662756	0.2334086	Home	0.3816794	0.3816794	NA	Away
+KhFrDF1M	2019-01-02 19:45:00	wolves	crystal-palace	NA	NA	0.4056734	0.2930383	0.2900837	Home	0.5000000	0.2380952	0.2941176	Home
+t2GvEenG	2019-01-02 19:45:00	west-ham	brighton	NA	NA	0.5424637	0.1868726	0.2394965	Home	0.4878049	0.2500000	0.2666667	Home
+YyDWFHH3	2019-01-03 20:00:00	manchester-city	liverpool	NA	NA	0.5925799	0.1322984	0.1738300	Home	0.4761905	0.2857143	0.2631579	Home
+3.3. Random Forest
+
+Another model is built with random forest algorithm for predicting the match results since random forest is known as a successful predictor for classification. The number of variables randomly sampled as candidates at each split which is the parameter âmtryâ is tuned by tuneRF function and then the model is trained using randomforest function and doing 10-fold cross validation. The predicted probabilities were reasonable compared to glmnet model and the real match results in that, accuracy of the model was a bit higher than the previous ones.
+
+3.4 Scores of the Teams from Their Last 5 Matches
+
+As an improvement to the model, a new feature related performance of the teams for the last 5 games was added. 2 points were given for the won game, and 1 point for draw was given. Therefore a team can at most have 10 points for this feature. The model uses both home and away teamsâ scores for their last five matches as the variable. This feature also reflects the opponentâs strength for each team in a match, which is considered important for match result forecasting, according to the sources we encountered during literature search. This feature addition made an incremental improvement on predicted probabilities, however, it can have a notable effect on the accuracy of the model in the long run.
+
+Here are the final results including random forest model and last 5 matchesâ scores feature.
+
+## Number of bookmakers with proportion of missings below 0.01 since 2012-07-15 : 15 
+## Number of bookmakers with no missings since testStart 2018-12-21 : 15
+x
+0.4640804
+Note: 10-fold Cross Validation Error
+matchId	Match_Date	Match_Result	Home	Away	Odd_Close_oddX_bet365	Odd_Close_oddX_betathome	Odd_Close_oddX_bwin	home_last5score	away_last5score
+0Uu6adXM	2018-12-29	Tie	watford	newcastle	3.75	3.66	3.70	5	4
+25zm2hlc	2018-12-29	Away	leicester	cardiff	3.90	3.84	3.90	5	3
+4M8AisZo	2018-12-26	Tie	fulham	wolves	3.20	3.05	3.00	2	6
+67t20xIG	2018-12-29	Away	tottenham	wolves	4.50	4.31	4.20	10	7
+6Rxtx2Zb	2018-12-22	Away	huddersfield	southampton	3.10	2.98	3.00	2	3
+Aumg2bm4	2018-12-30	Home	manchester-utd	bournemouth	5.50	5.08	5.25	7	4
+Away	Home	Tie
+Away	8	8	0
+Home	3	9	0
+Tie	2	2	1
+Table: Confusion Matrix of Test Data
+matchId	Match_Date	Match_Result	Away	Home	Tie
+0Uu6adXM	2018-12-29	Tie	0.142	0.590	0.268
+25zm2hlc	2018-12-29	Away	0.200	0.518	0.282
+4M8AisZo	2018-12-26	Tie	0.430	0.300	0.270
+67t20xIG	2018-12-29	Away	0.188	0.568	0.244
+6Rxtx2Zb	2018-12-22	Away	0.248	0.484	0.268
+Aumg2bm4	2018-12-30	Home	0.092	0.788	0.120
+CMONHwmi	2019-01-01	Away	0.204	0.528	0.268
+EDHOnJmH	2018-12-26	Home	0.050	0.820	0.130
+EXqAbGnT	2019-01-01	Home	0.154	0.748	0.098
+EggnAnor	2019-01-12	NA	0.412	0.314	0.274
+Eitlzt4B	2018-12-22	Tie	0.270	0.350	0.380
+Eks5w9Bd	2018-12-26	Tie	0.186	0.696	0.118
+IoOFluJ4	2018-12-26	Home	0.040	0.756	0.204
+KEMxfzep	2019-01-02	NA	0.250	0.278	0.472
+KhFrDF1M	2019-01-02	NA	0.196	0.548	0.256
+Table: Respective Probabilities Found By the Model
+4.RESULTS
+
+
+
+In the first round, we selected a number of reputable bookmakers and discarded others. In the second round, we saw that this selection did not improve our model and then submitted the results with the base multinomial penalized regression model. In the 3rd round, we tried Poisson model. Although the number of correct forecasts increased, since it had higher RPS, we abandoned this model. In the 4th round we narrowed traindata date range, but it had higher RPS than the basic penalized regression model.In the 6th round, we tried with the random forest model. Although RPS increased compared to previous rounds, we decided to build improvements on this model, because it favored more on the winning teams, in terms of probabilities. In the 7th round RPS slightly increased but this may be due to some surprise match results. In the last round, we added âscores from the last 5 matchesâ information to the feature data and it gave slightly better results.
+
+5.CONCLUSION AND FUTURE WORK
+
+5 different models were trained on the data in total with 3 different algorithms and their modified versions. The features are the odds which are converted to the probabilities for home, away and tie results. The first model trained is multinomial logistic regression by using glmnet function in R. It gave an RPS of 0.168 when some unsuccessful bookmakers are removed and it gave an RPS of 0.162 when we use all bookmakers except âBetfairExchangeâand âPaddyPowerâ. Among the matches predicted for the first round, the model predicted 6 and for the second round 7 out of 10 correctly. For the next round, Poisson model is built to predict the probabilities based on the assumption of the expected number of goals a team will make is given by Poisson distribution. Mean RPS of this model is 0.194 which predicted 7 of 10 matches correctly. Because RPS of the penalized regression model was lower than Poisson one, the former was used for the next round. After some literature review on this topic, it was seen that random forest model could be a good candidate for predicting the match result probabilities. Therefore, random forest was implemented on the same data by using odd features again. After cross validation, mean RPS was obtained as 0.185 for the model and it predicted 7 of 10 matches correctly. Thereafter, a new feature related performance of the teams for the last 5 games was added to the model and next upcoming matchesâ results were predicted. The model with this feature addition, gave mean RPS of 0.22 and it predicted 5 of 10 matches correctly.
+
+Overall, the performances of each model are very close to each other based on mean RPS values and the probabilities of the ones predicted correctly. The predicted probabilities submitted were ranked one for each round. All the models are biased in favor of home win probability since the number of matches in which home team won is greater in the data, and average home goals are greater than average away goals. Similarly, all of the models are not good at predicting tie results which is expected.
+
+The model can be extended by adding new features in the future. For instance, performance of the teams in different seasons may be added as a feature. Playersâ quality or over/under odds and can be also added to the data which can affect the model as well. Besides adding new features to the model, different machine learning algorithms can be also utilized such as boosting or ordered logistic regression. Since the data is huge and is getting bigger after each match played, many methods can be tried with many different variable affecting the game results.
+
+6. R CODES
+
+require(data.table)
+require(TunePareto)
+require(glmnet)
+library(dplyr)
+library(caret)
+
+
+setwd("C:/Users/dsa/Desktop/582 Dosyalar/582 Proje")
+
+testStart = as.Date("2018-12-21")
+trainStart = as.Date("2012-07-15")
+rem_miss_threshold = 0.01  #parameter for removing bookmaker odds with missing ratio greater than this threshold
+
+# Functions provided by our instructor
+
+source("data_preprocessing.r")
+source("feature_extraction.r")
+source("performance_metrics.r")
+source("train_models.r")
+
+
+# read data
+setwd("C:/Users/dsa/Downloads")
+matches_raw = readRDS("df9b1196-e3cf-4cc7-9159-f236fe738215_matches.rds")
+odd_details_raw = readRDS("df9b1196-e3cf-4cc7-9159-f236fe738215_odd_details.rds")
+
+
+# preprocess matches
+matches = matches_data_preprocessing(matches_raw)
+
+# preprocess odd data
+odd_details = details_data_preprocessing(odd_details_raw, matches)
+odd_details[Match_Date > testStart]
+
+# extract open and close odd type features from multiple
+# bookmakers
+features = extract_features.openclose(matches, odd_details, pMissThreshold = rem_miss_threshold, 
+    trainStart, testStart)
+
+
+# divide data based on the provided dates
+matchinfo = matches[, c(2, 3, 4, 5, 10)]
+matchinfo = matchinfo[complete.cases(matchinfo)]
+
+homescore = rep(0, nrow(matchinfo))
+awayscore = rep(0, nrow(matchinfo))
+
+matchinfo1 = cbind(matchinfo, homescore, awayscore)
+
+for (i in 1:nrow(matchinfo1)) {
+    if (matchinfo1$Match_Result[i] == "Tie") {
+        matchinfo1$homescore[i] = 1
+        matchinfo1$awayscore[i] = 1
+    }
+    if (matchinfo1$Match_Result[i] == "Home") {
+        matchinfo1$homescore[i] = 2
+        matchinfo1$awayscore[i] = 0
+    }
+    if (matchinfo1$Match_Result[i] == "Away") {
+        matchinfo1$homescore[i] = 0
+        matchinfo1$awayscore[i] = 2
+    }
+}
+
+# Finding scores of the teams from their last 5 games
+
+teams_unique <- unique(as.vector(as.matrix(matches[, c("Home", 
+    "Away")])))
+teams_unique <- as.factor(teams_unique)
+
+df = data.frame()
+
+for (i in 1:length(teams_unique)) {
+    matchfiltered = matchinfo1 %>% filter(Home == teams_unique[i] | 
+        Away == teams_unique[i]) %>% arrange(desc(Match_Date))
+    dim(matchfiltered)
+    row_number = nrow(matchfiltered) - 5
+    
+    last5 = rep(NA, nrow(matchfiltered))
+    
+    for (j in 1:row_number) {
+        score = 0
+        for (k in 1:5) {
+            if (matchfiltered[(j + k), ]$Home == teams_unique[i]) {
+                score = score + matchfiltered[(j + k), ]$homescore
+            } else if (matchfiltered[(j + k), ]$Away == teams_unique[i]) {
+                score = score + matchfiltered[(j + k), ]$awayscore
+            }
+        }
+        matchfiltered$last5[j] = score
+    }
+    matchfiltered$last5[(row_number + 1):nrow(matchfiltered)] = 0
+    last5_dummy = cbind(matchfiltered$matchId, as.character(teams_unique[i]), 
+        matchfiltered$last5)
+    df = rbind(df, last5_dummy)
+}
+
+colnames(df) = c("matchId", "team", "last5_score")
+
+df$matchId = as.character(df$matchId)
+df$team = as.character(df$team)
+
+matches_new = matches %>% left_join(df, by = c("matchId", Home = "team"))
+colnames(matches_new)[15] = c("home_last5score")
+matches_new2 = matches_new %>% left_join(df, by = c("matchId", 
+    Away = "team"))
+colnames(matches_new2)[16] = c("away_last5score")
+
+
+features = merge(features, matches_new2[, c(2, 15, 16)], by = "matchId")
+
+## 
+
+train_features = features[Match_Date >= trainStart & Match_Date < 
+    testStart]
+test_features = features[Match_Date >= testStart]
+
+# run glmnet on train data with tuning lambda parameter based
+# on RPS and return predictions based on lambda with minimum
+# RPS predictions=train_glmnet(train_features,
+# test_features,not_included_feature_indices=c(1:5),
+# alpha=1,nlambda=50,
+# tune_lambda=TRUE,nofReplications=2,nFolds=10,trace=T)
+
+train_features = train_features[complete.cases(train_features)]
+# test_features=test_features[complete.cases(test_features)]
+
+traindata_main = train_features[, -c(1:5)]
+testdata_main = test_features[, -c(1:5)]
+train.class_main = train_features$Match_Result
+
+traindata_withclass = cbind(traindata_main, train.class_main)
+names(traindata_withclass)
+library(randomForest)
+set.seed(123)
+# res <- tuneRF(x=traindata_withclass[,-93],
+# y=as.factor(traindata_withclass$train.class_main),mtryStart=10,ntreeTry=500,stepFactor=2.5,improve=0.01)
+# saveRDS(res,'rf_proje.rds')
+res <- readRDS("rf_proje.rds")
+# Look at results
+print(res)
+
+# Find the mtry value that minimizes OOB Error
+mtry_opt <- res[, "mtry"][which.min(res[, "OOBError"])]
+
+# 10 fold Cross Validation
+
+fold_indices = generateCVRuns(as.factor(traindata_withclass$train.class_main), 
+    1, 10, stratified = TRUE)
+errs_rf <- rep(NA, 10)
+
+# for (i in 1:10) { Replication=fold_indices[[1]]
+# testindices=Replication[[i]]
+# train=traindata_withclass[-testindices,]
+# test=traindata_withclass[testindices,]
+# train_class<-as.factor(train$train.class_main) rf_model =
+# randomForest(train[,-93],train_class,ntree=500,mtry =
+# mtry_opt,nodesize=5)
+# predict_rf=predict(rf_model,test,type='class')
+# conf.mat_rf<-table(as.factor(test$train.class_main),predict_rf)
+# errs_rf[i] <- 1-sum(diag(conf.mat_rf))/sum(conf.mat_rf) }
+# saveRDS(errs_rf,'errors_rf.rds')
+errs_rf <- readRDS("errors_rf.rds")
+print(paste("10-fold Cross Validation Error:", mean(errs_rf)))
+
+model2 <- randomForest(traindata_withclass[, -93], as.factor(traindata_withclass$train.class_main), 
+    ntree = 500, mtry = mtry_opt, nodesize = 5)
+
+pred <- predict(model2, traindata_withclass[, -93], type = "prob")
+
+## predict testfeatures
+test_feat = merge(test_features, matches[, 2:4], by = "matchId")
+
+# Fill the NA Scores in Testdata with the Last Scores of Home
+# and Away Teams
+
+for (i in 1:nrow(test_feat)) {
+    if (is.na(test_feat$home_last5score[i])) {
+        temp <- df %>% filter(team == test_feat$Home[i])
+        test_feat$home_last5score[i] = temp$last5_score[1]
+        temp <- df %>% filter(team == test_feat$Away[i])
+        test_feat$away_last5score[i] = temp$last5_score[1]
+    }
+}
+
+
+testdata_withoutclass = test_feat[, -c(1:5, 98, 99)]
+
+pred <- predict(model2, testdata_withoutclass, type = "class")
+
+table(as.factor(test_features$Match_Result), pred)
+pred.prob <- predict(model2, testdata_withoutclass, type = "prob")
+pred.prob
+
+
+## train class labels considered as output
+train_class = data.table(finaltable2)
+train_class[, `:=`(pred_id, 1:.N)]
+train_class_outcomes = data.table::dcast(train_class, pred_id ~ 
+    Match_Result, value.var = "pred_id")
+
+train_class_outcomes[, `:=`(pred_id, NULL)]
+train_class_outcomes[is.na(train_class_outcomes)] = 0
+train_class_outcomes[train_class_outcomes > 0] = 1
+setcolorder(train_class_outcomes, c("Home", "Tie", "Away"))
+
+## using RPS
+RPS_matrix <- function(probs, outcomes) {
+    probs = as.matrix(probs)
+    outcomes = as.matrix(outcomes)
+    probs = t(apply(t(probs), 2, cumsum))
+    outcomes = t(apply(t(outcomes), 2, cumsum))
+    RPS = apply((probs - outcomes)^2, 1, sum)/(ncol(probs) - 
+        1)
+    return(RPS)
+}
+
+## RPS results for ordered
+RPS_results = RPS_matrix(pred.prob[, c(2, 3, 1)], train_class_outcomes)
+RPS_results = data.table(RPS_results)
+mean(RPS_results$RPS_results)
+
+RPS = predictions$cv_stats$meanRPS_min
+RPS
+
+# Poisson Model
+
+
+library(skellam)
+setwd("C:/Users/dsa/Downloads")
+matches = readRDS("df9b1196-e3cf-4cc7-9159-f236fe738215_matches.rds")
+
+odd_details = readRDS("df9b1196-e3cf-4cc7-9159-f236fe738215_odd_details.rds")
+
+matches = unique(matches)
+
+matches <- data.table(matches)
+odd_details <- data.table(odd_details)
+# transform unix time to date time
+
+matches[, `:=`(Match_DateTime, as.POSIXct(date, tz = "UTC", origin = as.POSIXct("1970-01-01", 
+    tz = "UTC")))]
+matches[, `:=`(Match_Hour, format(strptime(Match_DateTime, "%Y-%m-%d %H:%M:%OS"), 
+    "%H"))]
+matches[, `:=`(Match_Hour, as.numeric(Match_Hour))]
+matches[, `:=`(Match_Date, as.Date(Match_DateTime, format = "%Y-%m-%d"))]
+
+
+matches[, `:=`(c("HomeGoals", "AwayGoals"), tstrsplit(score, 
+    ":"))]
+
+
+# transform characters to numeric for scores
+matches$HomeGoals = as.numeric(matches$HomeGoals)
+matches[, `:=`(AwayGoals, as.numeric(AwayGoals))]
+
+new <- matches %>% select(matchId, Match_DateTime, home, away, 
+    HomeGoals, AwayGoals) %>% filter(!is.na(HomeGoals))
+new <- new %>% filter(home != c("manchester united", "manchester-utd", 
+    "manchester city", "crystal palace") && away != c("manchester united", 
+    "manchester-utd", "manchester city", "crystal palace"))
+deneme <- new %>% filter(!home %in% c("manchester united", "manchester-utd", 
+    "manchester city", "crystal palace") & away == c("manchester united", 
+    "manchester-utd", "manchester city", "crystal palace"))
+testdata <- matches %>% select(matchId, Match_DateTime, home, 
+    away, HomeGoals, AwayGoals) %>% filter(is.na(HomeGoals))
+skellam::dskellam(0, mean(new$HomeGoals), mean(new$AwayGoals))
+
+data.frame(avg_home_goals = mean(new$HomeGoals), avg_away_goals = mean(new$AwayGoals))
+
+poisson_model <- rbind(data.frame(goals = new$HomeGoals, team = new$home, 
+    opponent = new$away, home = 1), data.frame(goals = new$AwayGoals, 
+    team = new$away, opponent = new$home, home = 0)) %>% glm(goals ~ 
+    home + team + opponent, family = poisson(link = log), data = .)
+summary(poisson_model)
+
+simulate_match <- function(foot_model, homeTeam, awayTeam, max_goals = 10) {
+    home_goals_avg <- predict(foot_model, data.frame(home = 1, 
+        team = homeTeam, opponent = awayTeam), type = "response")
+    away_goals_avg <- predict(foot_model, data.frame(home = 0, 
+        team = awayTeam, opponent = homeTeam), type = "response")
+    dpois(0:max_goals, home_goals_avg) %o% dpois(0:max_goals, 
+        away_goals_avg)
+}
+
+new <- new %>% mutate(home_win_prob = NA, away_win_prob = NA, 
+    tie_prob = NA)
+
+for (i in 1:nrow(new)) {
+    temp <- simulate_match(poisson_model, new$home[i], new$away[i], 
+        max_goals = 10)
+    new$home_win_prob[i] <- sum(temp[lower.tri(temp)])
+    new$away_win_prob[i] <- sum(temp[upper.tri(temp)])
+    new$tie_prob[i] <- sum(diag(temp))
+}
+
+new <- new %>% mutate(result_guess = NA)
+for (i in 1:nrow(new)) {
+    if (new$home_win_prob[i] > new$away_win_prob[i] & new$home_win_prob[i] > 
+        new$tie_prob[i]) {
+        new$result_guess[i] = "Home"
+    } else if (new$away_win_prob[i] > new$home_win_prob[i] & new$away_win_prob[i] > 
+        new$tie_prob[i]) {
+        new$result_guess[i] = "Away"
+    } else if (new$tie_prob[i] > new$home_win_prob[i] & new$tie_prob[i] > 
+        new$away_win_prob[i]) {
+        new$result_guess[i] = "Tie"
+    }
+    
+}
+
+
+testdata <- testdata %>% mutate(home_win_prob = NA, away_win_prob = NA, 
+    tie_prob = NA)
+
+for (i in 1:nrow(testdata)) {
+    temp <- simulate_match(poisson_model, testdata$home[i], testdata$away[i], 
+        max_goals = 4)
+    testdata$home_win_prob[i] <- sum(temp[lower.tri(temp)])
+    testdata$away_win_prob[i] <- sum(temp[upper.tri(temp)])
+    testdata$tie_prob[i] <- sum(diag(temp))
+}
+
+testdata <- testdata %>% mutate(result_guess = NA)
+for (i in 1:nrow(testdata)) {
+    if (testdata$home_win_prob[i] > testdata$away_win_prob[i] & 
+        testdata$home_win_prob[i] > testdata$tie_prob[i]) {
+        testdata$result_guess[i] = "Home"
+    } else if (testdata$away_win_prob[i] > testdata$home_win_prob[i] & 
+        testdata$away_win_prob[i] > testdata$tie_prob[i]) {
+        testdata$result_guess[i] = "Away"
+    } else if (testdata$tie_prob[i] > testdata$home_win_prob[i] & 
+        testdata$tie_prob[i] > testdata$away_win_prob[i]) {
+        testdata$result_guess[i] = "Tie"
+    }
+    
+}
+
+odd_test <- odd_details %>% filter(betType == "1x2", bookmaker == 
+    "bet365", oddtype == c("odd1", "odd2", "oddX")) %>% select(matchId, 
+    odd, oddtype, date)
+odd_test <- data.table(odd_test)
+odd_test[, `:=`(odd_DateTime, as.POSIXct(date, tz = "UTC", origin = as.POSIXct("1970-01-01", 
+    tz = "UTC")))]
+odd_test[, `:=`(odd_Hour, format(strptime(odd_DateTime, "%Y-%m-%d %H:%M:%OS"), 
+    "%H"))]
+odd_test[, `:=`(odd_Hour, as.numeric(odd_Hour))]
+odd_test[, `:=`(odd_Date, as.Date(odd_DateTime, format = "%Y-%m-%d"))]
+
+feature_odd_details = odd_test[, list(Odd_Open = odd[1], Odd_Close = odd[.N]), 
+    list(matchId, oddtype)]
+
+feature_odd_details_test = merge(testdata, feature_odd_details, 
+    by = "matchId")
+
+feature_odd_details_test <- feature_odd_details_test %>% mutate(prob_bookmaker = 1/Odd_Close)
+
+details <- dcast(feature_odd_details_test, matchId ~ oddtype, 
+    value.var = c("prob_bookmaker"))
+
+final <- merge(feature_odd_details_test[, 1:10], details, by = "matchId")
+
+final <- unique(final)
+
+final <- final %>% mutate(result_bookmaker = NA)
+final <- final %>% arrange(Match_DateTime)
+for (i in 1:nrow(final)) {
+    if (is.na(final$odd1[i])) {
+        final$result_bookmaker[i] = "Away"
+    } else if (is.na(final$odd2[i])) {
+        final$result_bookmaker[i] = "Home"
+    } else if (is.na(final$oddX[i])) {
+        if (final$odd1[i] > final$odd2[i]) {
+            final$result_bookmaker[i] = "Home"
+        } else {
+            final$result_bookmaker[i] = "Away"
+        }
+    } else if (final$odd1[i] > final$odd2[i] & final$odd1[i] > 
+        final$oddX[i]) {
+        final$result_bookmaker[i] = "Home"
+    } else if (final$odd2[i] > final$odd1[i] & final$odd2[i] > 
+        final$oddX[i]) {
+        final$result_bookmaker[i] = "Away"
+    } else if (final$oddX[i] > final$odd1[i] & final$oddX[i] > 
+        final$odd2[i]) {
+        final$result_guess[i] = "Tie"
+    }
+    
+}
+
+
+colnames(new)[7:9] <- c("Home", "Away", "Tie")
+
+train_class <- new$result_guess
+train_class = data.table(train_class)
+train_class[, `:=`(pred_id, 1:.N)]
+train_class_outcomes = data.table::dcast(train_class, pred_id ~ 
+    train_class, value.var = "pred_id")
+train_class_outcomes[, `:=`(pred_id, NULL)]
+train_class_outcomes[is.na(train_class_outcomes)] = 0
+train_class_outcomes[train_class_outcomes > 0] = 1
+setcolorder(train_class_outcomes, c("Home", "Tie", "Away"))
+
+## using RPS
+RPS_matrix <- function(probs, outcomes) {
+    probs = as.matrix(probs)
+    outcomes = as.matrix(outcomes)
+    probs = t(apply(t(probs), 2, cumsum))
+    outcomes = t(apply(t(outcomes), 2, cumsum))
+    RPS = apply((probs - outcomes)^2, 1, sum)/(ncol(probs) - 
+        1)
+    return(RPS)
+}
+7. REFERENCES
+
+[1] Karlis, Dimitris and Ioannis Ntzoufras. âAnalysis Of Sports Data By Using Bivariate Poisson Modelsâ. Journal of the Royal Statistical Society: Series D (The Statistician) 52.3 (2003): 381- 393. Web.
+
+[2] Maher, Michael J. âModelling association football scores.â Statistica Neerlandica 36.3 (1982): 109-118.
+
+[3] Fernandez, Mathew and Ulmer,Ben âPredicting Soccer Match Results in the English Premier Leagueâ CS229 STANFORD, 2014.
+
+[4] Jonas Mirza, Niklas Fejes. (2016). Statistical Football Modelling, A study of Betting and Implementation of Statistical Algorithms in Premier League.
+
+[5] David Sheehan. âPredicting Football Results With Statistical Modelling.â dashee87.Github.io, 30 May 2017. Web.
